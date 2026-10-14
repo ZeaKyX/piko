@@ -12,7 +12,6 @@ import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -233,7 +232,6 @@ internal fun localTransferActions(
     onStart: () -> Unit,
     onPause: () -> Unit,
     onRemove: () -> Unit,
-    onCopyDirectLink: (() -> Unit)? = null,
     /** 为 null 表示没有可切换的预览（防窥关闭或没有缩略图），不显示该项。 */
     previewHidden: Boolean?,
     onTogglePreview: () -> Unit,
@@ -241,9 +239,6 @@ internal fun localTransferActions(
     val isMedia = task.isMedia()
     val intents = LocalFileIntents(files, task, isMedia)
     return buildList {
-        if (!task.isSegment && task.fileId.isNotBlank()) {
-            onCopyDirectLink?.let { add(SheetAction(Icons.Outlined.Link, "复制直链", it)) }
-        }
         // 边下边播只认原画的暂存；转码档的暂存是转封装前的 TS，播放走不到它
         if (task.status != DownloadStatus.COMPLETED && !task.isSegment && task.mediaId == null && isMedia && task.sparseCache && task.downloadedBytes > 0) {
             add(SheetAction(Icons.Outlined.PlayArrow, "播放", onPlay))

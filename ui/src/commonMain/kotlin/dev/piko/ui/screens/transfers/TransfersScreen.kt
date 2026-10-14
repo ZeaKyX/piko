@@ -246,18 +246,6 @@ fun TransfersScreen(
             onStart = { state.resumeLocal(item.task.taskId) },
             onPause = { state.pauseLocal(item.task.taskId) },
             onRemove = { state.removeLocal(item.task.taskId) },
-            onCopyDirectLink = if (!item.task.isSegment && item.task.fileId.isNotBlank()) {
-                {
-                    scope.launch {
-                        services.mediaRepository.directDownloadUrl(item.task.fileId, item.task.mediaId)
-                            .onSuccess { url ->
-                                platform.copyToClipboard("文件直链", url)
-                                snackbarHostState.showSnackbar("已复制文件直链", withDismissAction = true)
-                            }
-                            .onFailure { snackbarHostState.showSnackbar("获取文件直链失败", withDismissAction = true) }
-                    }
-                }
-            } else null,
             previewHidden = if (isSpoilerBlurEnabled && hasPreview(item.task)) item.key !in revealedKeys else null,
             onTogglePreview = { if (!revealedKeys.remove(item.key)) revealedKeys.add(item.key) },
         )

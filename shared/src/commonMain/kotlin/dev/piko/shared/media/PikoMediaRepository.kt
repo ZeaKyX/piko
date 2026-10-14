@@ -187,17 +187,11 @@ class PikoMediaRepository(
         }
 
     /** 获取当前签名的文件直链。链接会过期，调用方应在用户触发复制或外部下载时现取。 */
-    suspend fun directDownloadUrl(fileId: String, mediaId: String? = null): Result<String> =
+    suspend fun directDownloadUrl(fileId: String): Result<String> =
         withContext(Dispatchers.Default) {
             runSuspendCatching {
-                val detail = detailOf(client, fileId)
-                val url = if (mediaId == null) {
-                    detail.resolveVariant(VariantPreference.Original).link.url
-                } else {
-                    detail.medias.firstOrNull { it.mediaId == mediaId }?.link?.url
-                        ?: error(TRANSCODE_GONE_MESSAGE)
-                }
-                url.takeIf { it.isNotBlank() } ?: error("PikPak 未提供文件直链")
+                detailOf(client, fileId).downloadUrl?.takeIf { it.isNotBlank() }
+                    ?: error("PikPak 未提供文件直链")
             }
         }
 
