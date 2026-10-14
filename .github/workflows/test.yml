@@ -231,6 +231,14 @@ jobs:
         # 先在模拟器外编好，模拟器启动的那段时间不被 Gradle 占着
         run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest -Ppiko.enableAbiSplits=false --no-daemon --stacktrace
 
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: piko-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: AVD cache
         uses: actions/cache@v5
         id: avd-cache
