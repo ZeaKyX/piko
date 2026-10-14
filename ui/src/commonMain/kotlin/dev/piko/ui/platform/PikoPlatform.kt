@@ -95,6 +95,9 @@ interface PikoPlatform {
     /** 为 null 表示该平台没法把视频交给其他播放器，「用外部播放器打开」随之隐藏。 */
     val externalPlayer: ExternalVideoPlayer?
 
+    /** 为 null 表示该平台没有可调用的外部下载器选择器。 */
+    val externalDownloader: ExternalDownloader? get() = null
+
     /** 为 null 表示该平台不提供片段下载的画面预览，入口随之隐藏。 */
     val videoPreview: VideoPreviewSupport?
 
@@ -221,6 +224,10 @@ interface LandscapeLock {
 
 fun interface ExternalVideoPlayer {
     suspend fun open(url: String, fileName: String): Boolean
+}
+
+fun interface ExternalDownloader {
+    fun download(url: String, fileName: String): Boolean
 }
 
 /** 片段下载面板与随机片段里的画面预览：一个缓存小、不自动播放的播放后端，加上它的画面表面。 */

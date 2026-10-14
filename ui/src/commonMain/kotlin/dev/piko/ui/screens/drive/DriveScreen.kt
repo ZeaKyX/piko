@@ -726,6 +726,28 @@ fun DriveScreen(
     }
 
     val mediaRepository = LocalPikoServices.current.mediaRepository
+    fun copyDirectLink(file: FileStat) {
+        scope.launch {
+            mediaRepository.directDownloadUrl(file.id)
+                .onSuccess { url ->
+                    platform.copyToClipboard("文件直链", url)
+                    snackbarHostState.showSnackbar("已复制文件直链", withDismissAction = true)
+                }
+                .onFailure { snackbarHostState.showSnackbar("获取文件直链失败", withDismissAction = true) }
+        }
+    }
+    fun downloadWithOtherApp(file: FileStat) {
+        val downloader = platform.externalDownloader ?: return
+        scope.launch {
+            val url = mediaRepository.directDownloadUrl(file.id).getOrElse {
+                snackbarHostState.showSnackbar("获取文件直链失败", withDismissAction = true)
+                return@launch
+            }
+            if (!downloader.download(url, file.name)) {
+                snackbarHostState.showSnackbar("无法打开外部下载器", withDismissAction = true)
+            }
+        }
+    }
     fun openInExternalPlayer(file: FileStat) {
         val player = platform.externalPlayer ?: return
         scope.launch {
@@ -930,6 +952,10 @@ fun DriveScreen(
             prepareQualities = { mediaRepository.prefetchDownloadQualities(file.id) },
             copySource = if (desktop) ({ copySource(file) }) else null,
             openSource = if (desktop) ({ file.sourceUrl?.let(platform::openUrl) }) else null,
+            copyDirectLink = if (desktop && !file.isFolder && !file.isUploading) ({ copyDirectLink(file) }) else null,
+            downloadWithOtherApp = if (desktop && !file.isFolder && !file.isUploading) {
+                platform.externalDownloader?.let { { downloadWithOtherApp(file) } }
+            } else null,
             openInExternalPlayer = platform.externalPlayer?.let { { openInExternalPlayer(file) } },
             openInNewTab = latestOpenInNewTab?.let { { it(file) } },
             togglePin = latestTogglePin?.let { { it(file) } },
@@ -1995,6 +2021,12 @@ fun DriveScreen(
                 actionTargetFile = null
                 copySource(target)
             },
+            onCopyDirectLink = if (!desktop && !inTrash && state.archiveView == null && !target.isFolder && !target.isUploading && !target.isVaulted) {
+                { actionTargetFile = null; copyDirectLink(target) }
+            } else null,
+            onDownloadWithOtherApp = if (!desktop && !inTrash && state.archiveView == null && !target.isFolder && !target.isUploading && !target.isVaulted) {
+                platform.externalDownloader?.let { { actionTargetFile = null; downloadWithOtherApp(target) } }
+            } else null,
         )
     }
 

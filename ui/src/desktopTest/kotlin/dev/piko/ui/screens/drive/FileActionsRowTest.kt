@@ -17,9 +17,11 @@ import kotlin.test.assertTrue
 class FileActionsRowTest {
     private val file = FileStat(kind = FileKind.FILE, id = "f", name = "a.txt", fileExtension = ".txt")
 
-    private fun handlers(desktop: Boolean) = FileActionHandlers(
+    private fun handlers(desktop: Boolean, directLinks: Boolean = false) = FileActionHandlers(
         toggleStar = {}, download = {}, share = {}, rename = {}, move = {}, copy = {}, trash = {}, extract = {},
         findDuplicates = {}, canonicalNameFolder = null, downloadSegment = {}, prepareQualities = {}, copySource = {}, openSource = {},
+        copyDirectLink = if (directLinks) ({}) else null,
+        downloadWithOtherApp = if (directLinks) ({}) else null,
         openInExternalPlayer = null, openInNewTab = null, togglePin = null, isPinned = false, vault = {}, unvault = null,
         previewHidden = null, togglePreview = {},
         putOnClipboard = if (desktop) ({ _ -> }) else null,
@@ -41,5 +43,13 @@ class FileActionsRowTest {
         val layout = layoutActions(actions(desktop = false))
         assertEquals(listOf("下载到本地", "分享", "添加星标", "重命名"), layout.quick.map { it.label })
         assertTrue(layout.sections.flatten().none { it.label == "剪切" || it.label == "复制" })
+    }
+
+    @Test
+    fun `a file menu exposes direct link actions when the platform supports them`() {
+        val labels = fileActions(file, itemCommands(CommandPlace.FOLDER, listOf(file)), handlers(desktop = true, directLinks = true))
+            .map { it.label }
+        assertTrue("复制直链" in labels)
+        assertTrue("用其他下载器" in labels)
     }
 }

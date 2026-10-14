@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,6 +48,8 @@ internal fun FileActionsSheet(
     actions: List<SheetAction>,
     onDismiss: () -> Unit,
     onCopySource: () -> Unit,
+    onCopyDirectLink: (() -> Unit)? = null,
+    onDownloadWithOtherApp: (() -> Unit)? = null,
 ) {
     val file = name.file
     val usage by produceState<FolderUsageResult?>(null, folderUsage) {
@@ -73,8 +76,33 @@ internal fun FileActionsSheet(
                 Text(text = locationLabel, color = MaterialTheme.colorScheme.primary)
             }
             file.source?.let { SourceLine(it, onCopySource) }
+            if (onCopyDirectLink != null || onDownloadWithOtherApp != null) {
+                DirectLinkLine(onCopyDirectLink, onDownloadWithOtherApp)
+            }
         },
     )
+}
+
+@Composable
+private fun DirectLinkLine(onCopy: (() -> Unit)?, onDownload: (() -> Unit)?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = "文件直链", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.weight(1f))
+        onCopy?.let {
+            TextButton(onClick = it, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("复制")
+            }
+        }
+        onDownload?.let {
+            TextButton(onClick = it, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                Icon(Icons.Outlined.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("下载器")
+            }
+        }
+    }
 }
 
 @Composable
@@ -113,6 +141,8 @@ internal class FileActionHandlers(
     /** 移动端为 null：来源写在面板头部那一行，复制按钮挂在那里，见 [FileActionsSheet]；打开来源分享在手机上不给。 */
     val copySource: (() -> Unit)?,
     val openSource: (() -> Unit)?,
+    val copyDirectLink: (() -> Unit)? = null,
+    val downloadWithOtherApp: (() -> Unit)? = null,
     /** 平台交不出去时为 null。 */
     val openInExternalPlayer: (() -> Unit)?,
     /** 没有标签栏（移动端）时为 null。 */
@@ -156,6 +186,10 @@ internal fun fileActions(file: FileStat, commands: ItemCommands, on: FileActionH
     )
     if (file.isFolder) on.openInNewTab?.let { add(DriveActions.openInNewTab(it)) }
     if (video) on.openInExternalPlayer?.let { add(DriveActions.openInExternalPlayer(it)) }
+    if (!file.isFolder) {
+        on.copyDirectLink?.let { add(DriveActions.copyDirectLink(it)) }
+        on.downloadWithOtherApp?.let { add(DriveActions.downloadWithOtherApp(it)) }
+    }
     if (commands.extract) add(DriveActions.extract(on.extract))
     // 桌面的星标在列表里，排在打开方式之后：放在它们之前的话整理组先出现，整组挪到打开方式之上
     if (desktop) add(DriveActions.star(file.isStarred, on.toggleStar, tier = ActionTier.Standard))

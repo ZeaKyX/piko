@@ -122,6 +122,12 @@ internal object DriveActions {
     fun openInExternalPlayer(onClick: () -> Unit) =
         SheetAction(Icons.Outlined.OndemandVideo, "用外部播放器打开", onClick, group = ActionGroup.Open)
 
+    fun copyDirectLink(onClick: () -> Unit) =
+        SheetAction(Icons.Outlined.Link, "复制直链", onClick, group = ActionGroup.Open)
+
+    fun downloadWithOtherApp(onClick: () -> Unit) =
+        SheetAction(Icons.Outlined.CloudDownload, "用其他下载器", onClick, group = ActionGroup.Open)
+
     fun extract(onClick: () -> Unit) = SheetAction(Icons.Outlined.Unarchive, "解压到当前位置", onClick, group = ActionGroup.Open)
 
     /** 在压缩包里解压选中的几项。不写「到当前位置」：当前位置是包里，解压出来的落在压缩包所在的文件夹。 */

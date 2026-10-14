@@ -60,6 +60,7 @@ import dev.piko.update.AppUpdateService
 import java.io.File
 import android.os.StatFs
 import dev.piko.ui.platform.DiskSpace
+import dev.piko.ui.platform.ExternalDownloader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -144,6 +145,17 @@ class AndroidPikoPlatform(
             .putExtra("title", fileName)
         runCatching {
             context.startActivity(Intent.createChooser(view, "选择播放器").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.isSuccess
+    }
+
+    override val externalDownloader: ExternalDownloader = ExternalDownloader { url, fileName ->
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, url)
+            putExtra(Intent.EXTRA_SUBJECT, fileName)
+        }
+        runCatching {
+            context.startActivity(Intent.createChooser(send, "选择下载器").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.isSuccess
     }
 
