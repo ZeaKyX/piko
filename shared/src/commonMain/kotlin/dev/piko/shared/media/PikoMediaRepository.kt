@@ -148,6 +148,8 @@ class UnreadableTranscodeException(cause: Throwable? = null) : IllegalStateExcep
 /** 选定的转码档在详情里已经没有了，给用户看的失败原因。 */
 const val TRANSCODE_GONE_MESSAGE = "PikPak 已不提供所选画质"
 
+const val WEB_CONTENT_LINK_NOT_PROVIDED_MESSAGE = "webContentLink未提供"
+
 class PikoMediaRepository(
     private val clientManager: PikoClientProvider,
     private val preferences: PikoUserPreferences? = null,
@@ -186,14 +188,13 @@ class PikoMediaRepository(
             }
         }
 
-    /** 获取当前签名的下载链接，优先使用网页端的 web_content_link；链接会过期，调用方应现取。 */
+    /** 获取当前签名的 web_content_link；链接会过期，调用方应现取。 */
     suspend fun directDownloadUrl(fileId: String): Result<String> =
         withContext(Dispatchers.Default) {
             runSuspendCatching {
                 val detail = detailOf(client, fileId)
                 detail.webContentLink.takeIf { it.isNotBlank() }
-                    ?: detail.downloadUrl?.takeIf { it.isNotBlank() }
-                    ?: error("PikPak 未提供文件直链")
+                    ?: error(WEB_CONTENT_LINK_NOT_PROVIDED_MESSAGE)
             }
         }
 

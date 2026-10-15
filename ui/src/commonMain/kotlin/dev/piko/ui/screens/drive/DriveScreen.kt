@@ -152,6 +152,7 @@ import dev.piko.shared.data.LastFolderStack
 import dev.piko.shared.data.PikoDriveRepository
 import dev.piko.shared.log.logFailure
 import dev.piko.shared.media.proxy.openForExternalPlayer
+import dev.piko.shared.media.WEB_CONTENT_LINK_NOT_PROVIDED_MESSAGE
 import dev.piko.shared.state.DriveScreenState
 import dev.piko.shared.state.VaultScope
 import dev.piko.shared.state.DuplicateFinderState
@@ -733,14 +734,14 @@ fun DriveScreen(
                     platform.copyToClipboard("文件直链", url)
                     snackbarHostState.showSnackbar("已复制文件直链", withDismissAction = true)
                 }
-                .onFailure { snackbarHostState.showSnackbar("获取文件直链失败", withDismissAction = true) }
+                .onFailure { snackbarHostState.showSnackbar(WEB_CONTENT_LINK_NOT_PROVIDED_MESSAGE, withDismissAction = true) }
         }
     }
     fun downloadWithOtherApp(file: FileStat) {
         val downloader = platform.externalDownloader ?: return
         scope.launch {
             val url = mediaRepository.directDownloadUrl(file.id).getOrElse {
-                snackbarHostState.showSnackbar("获取文件直链失败", withDismissAction = true)
+                snackbarHostState.showSnackbar(WEB_CONTENT_LINK_NOT_PROVIDED_MESSAGE, withDismissAction = true)
                 return@launch
             }
             if (!downloader.download(url, file.name)) {
