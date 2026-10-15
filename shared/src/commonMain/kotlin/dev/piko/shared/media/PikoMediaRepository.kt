@@ -186,11 +186,13 @@ class PikoMediaRepository(
             }
         }
 
-    /** 获取当前签名的文件直链。链接会过期，调用方应在用户触发复制或外部下载时现取。 */
+    /** 获取当前签名的下载链接，优先使用网页端的 web_content_link；链接会过期，调用方应现取。 */
     suspend fun directDownloadUrl(fileId: String): Result<String> =
         withContext(Dispatchers.Default) {
             runSuspendCatching {
-                detailOf(client, fileId).downloadUrl?.takeIf { it.isNotBlank() }
+                val detail = detailOf(client, fileId)
+                detail.webContentLink.takeIf { it.isNotBlank() }
+                    ?: detail.downloadUrl?.takeIf { it.isNotBlank() }
                     ?: error("PikPak 未提供文件直链")
             }
         }
