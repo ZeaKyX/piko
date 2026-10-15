@@ -25,6 +25,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.TimeSource
 
+private const val BrowserUserAgentForLinkProbe = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0"
+
 /**
  * 没有保存密码、而 SDK 需要重新用密码登录时抛出。refresh token 失效后 SDK 会自行回落到
  * 密码登录，这时只能让用户回登录页重新输入，不能拿空密码去试。
@@ -423,7 +425,6 @@ class PikoClientManager(
 
     private companion object {
         const val TAG = "Auth"
-        const val BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0"
         const val CONNECTION_BUDGET = 8
         const val ACCOUNT_CONNECTION_BUDGET = 16
         const val RECONNECT_INITIAL_DELAY_MS = 2_000L
@@ -440,8 +441,8 @@ private fun createBrowserUserAgentTestClient(): HttpClient = HttpClient {
     expectSuccess = false
 }.also { client ->
     client.plugin(HttpSend).intercept { request ->
-        if (request.method == HttpMethod.Get && request.url.encodedPath.startsWith("/drive/v1/files/")) {
-            request.headers[HttpHeaders.UserAgent] = BROWSER_USER_AGENT
+        if (request.method == HttpMethod.Get && request.url.build().encodedPath.startsWith("/drive/v1/files/")) {
+            request.headers[HttpHeaders.UserAgent] = BrowserUserAgentForLinkProbe
         }
         execute(request)
     }
