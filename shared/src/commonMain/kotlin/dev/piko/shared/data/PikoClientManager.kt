@@ -6,6 +6,11 @@ import io.github.nihildigit.pikpak.PikPakClient
 import io.github.nihildigit.pikpak.PikPakException
 import io.github.nihildigit.pikpak.Session
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpSend
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.plugin
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,14 +35,17 @@ class PasswordRequiredException : IllegalStateException("登录已失效，请�
  * 登录态与已保存的账号。同一时刻只有一个账号在用（[currentClient]），其余登录过、没退出的记在 [accounts] 里，
  * 手动切换（[switchTo]）。切换即换一个 client，各仓库照旧只认 [currentClient]，按账号的东西在账号变了时各自换一份。
  *
- * @param httpClient 交给 SDK 的 API 客户端。缺省由 SDK 自建；冒烟测试在这里换成 Ktor 的
- *   MockEngine，走的仍是 SDK 真实的鉴权、重试与解析路径。
+ * @param httpClient 交给 SDK 的 API 客户端。缺省时由 Piko 创建，并仅对文件详情请求覆盖 UA；冒烟测试在这里换成
+ *   Ktor 的 MockEngine，走的仍是 SDK 真实的鉴权、重试与解析路径，且不应用 UA 探针。
  */
 class PikoClientManager(
     private val sessionStore: PikoSessionStore,
     private val scope: CoroutineScope,
-    private val httpClient: HttpClient? = null,
+    httpClient: HttpClient? = null,
 ) : PikoClientProvider {
+    private val injectedHttpClient = httpClient
+    private val sdkHttpClient = httpClient ?: createBrowserUserAgentTestClient()
+
     private val _currentClient = MutableStateFlow<PikPakClient?>(null)
     override val currentClient: StateFlow<PikPakClient?> = _currentClient.asStateFlow()
 
@@ -80,8 +88,8 @@ class PikoClientManager(
         scope.launch(Dispatchers.Default) { restore() }
     }
 
-    /** 用的是 SDK 自建的网络客户端。注入的是测试的 MockEngine 时为 false，这时测根域名的速度没有意义。 */
-    val reachesRealNetwork: Boolean get() = httpClient == null
+    /** 是否连接真实网络。注入测试 MockEngine 时为 false，这时测根域名速度没有意义。 */
+    val reachesRealNetwork: Boolean get() = injectedHttpClient == null
 
     /**
      * 用上次的会话恢复登录。
@@ -403,7 +411,7 @@ class PikoClientManager(
             account = account,
             passwordSupplier = supplier,
             sessionStore = sessionStore,
-            httpClient = httpClient,
+            httpClient = sdkHttpClient,
             connectionBudget = CONNECTION_BUDGET,
             accountConnectionBudget = ACCOUNT_CONNECTION_BUDGET,
             // 每个账号共用请求预算，批量工作和交互请求合计保持每秒 16 次；实测依据见 development/archive.md。
@@ -415,10 +423,27 @@ class PikoClientManager(
 
     private companion object {
         const val TAG = "Auth"
+        const val BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0"
         const val CONNECTION_BUDGET = 8
         const val ACCOUNT_CONNECTION_BUDGET = 16
         const val RECONNECT_INITIAL_DELAY_MS = 2_000L
         const val RECONNECT_MAX_DELAY_MS = 60_000L
+    }
+}
+
+private fun createBrowserUserAgentTestClient(): HttpClient = HttpClient {
+    install(HttpTimeout) {
+        connectTimeoutMillis = 15_000
+        requestTimeoutMillis = 60_000
+        socketTimeoutMillis = 30_000
+    }
+    expectSuccess = false
+}.also { client ->
+    client.plugin(HttpSend).intercept { request ->
+        if (request.method == HttpMethod.Get && request.url.encodedPath.startsWith("/drive/v1/files/")) {
+            request.headers[HttpHeaders.UserAgent] = BROWSER_USER_AGENT
+        }
+        execute(request)
     }
 }
 
